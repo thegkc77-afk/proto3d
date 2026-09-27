@@ -1,0 +1,1083 @@
+<!DOCTYPE html><html lang="en" class="scroll-smooth"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proto3D – Interactive 3D Product Showcase</title>
+  
+  <!-- Tailwind CSS & Lucide Icons CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Three.js & OrbitControls for real WebGL 3D execution -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            proto: {
+              bg: '#F8F9FA',
+              dark: '#111111',
+              card: '#FFFFFF',
+              border: '#E5E7EB',
+              muted: '#6B7280',
+              accent: '#2563EB',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          boxShadow: {
+            'soft': '0 20px 40px -15px rgba(0,0,0,0.05)',
+            'float': '0 30px 60px -12px rgba(0,0,0,0.08)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F8F9FA;
+      color: #111111;
+      overflow-x: hidden;
+    }
+
+    .canvas-container {
+      touch-action: none;
+    }
+
+    .color-swatch.active {
+      transform: scale(1.15);
+      ring-width: 3px;
+    }
+
+    /* Custom Glassmorphism */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(229, 231, 235, 0.8);
+    }
+    
+    .loading-pulse {
+      animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-black selection:text-white">
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="sticky top-0 z-50 glass-card transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="#" class="flex items-center space-x-3 group">
+        <div class="w-10 h-10 rounded-xl bg-black flex items-center justify-center text-white font-bold text-lg tracking-wider shadow-md transition-transform duration-300 group-hover:scale-105">
+          P3
+        </div>
+        <div class="flex flex-col">
+          <span class="text-xl font-bold tracking-tight text-neutral-900">Proto<span class="text-neutral-500 font-medium">3D</span></span>
+          <span class="text-[10px] uppercase tracking-widest text-neutral-400 font-semibold -mt-1">Studio Pro</span>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation -->
+      <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-neutral-600">
+        <a href="#showcase" class="text-neutral-900 transition-colors">Showcase</a>
+        <a href="#features" class="hover:text-neutral-900 transition-colors">Features</a>
+        <a href="#technology" class="hover:text-neutral-900 transition-colors">Technology</a>
+        <a href="#specs" class="hover:text-neutral-900 transition-colors">Specifications</a>
+      </nav>
+
+      <!-- CTA Action & Badge -->
+      <div class="hidden md:flex items-center space-x-4">
+        <div class="flex items-center space-x-2 text-xs font-semibold px-3 py-1.5 bg-neutral-100 text-neutral-700 rounded-full border border-neutral-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span class="">WebGL 2.0 Active</span>
+        </div>
+        <a href="#showcase" class="px-5 py-2.5 bg-black hover:bg-neutral-800 text-white text-sm font-medium rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95">
+          Explore Product
+        </a>
+      </div>
+
+      <!-- Mobile Menu Toggle -->
+      <button id="mobileMenuBtn" aria-label="Toggle Navigation Menu" class="md:hidden p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 focus:outline-none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="menu" aria-hidden="true" class="lucide lucide-menu w-6 h-6"><path d="M4 5h16"></path><path d="M4 12h16"></path><path d="M4 19h16"></path></svg>
+      </button>
+    </div>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobileMenu" class="hidden md:hidden px-4 pt-2 pb-6 border-t border-neutral-200 bg-white/95 backdrop-blur-md">
+      <div class="flex flex-col space-y-4 pt-2 text-base font-medium text-neutral-700">
+        <a href="#showcase" class="hover:text-black py-1">Showcase</a>
+        <a href="#features" class="hover:text-black py-1">Features</a>
+        <a href="#technology" class="hover:text-black py-1">Technology</a>
+        <a href="#specs" class="hover:text-black py-1">Specifications</a>
+        <div class="pt-3 border-t border-neutral-100 flex flex-col gap-3">
+          <a href="#showcase" class="w-full text-center py-3 bg-black text-white rounded-xl font-medium">Explore Product</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= HERO SECTION ================= -->
+  <section class="relative pt-12 pb-6 sm:pt-16 sm:pb-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-neutral-200 text-xs font-medium text-neutral-600 mb-6 shadow-sm">
+      <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+      Next-Gen Hardware Experience
+    </div>
+    <h1 class="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-neutral-900 max-w-4xl mx-auto leading-[1.1]">
+      Experience Products in <span class="bg-gradient-to-r from-neutral-900 via-neutral-600 to-neutral-800 bg-clip-text text-transparent">3D</span>
+    </h1>
+    <p class="mt-5 text-lg sm:text-xl text-neutral-500 max-w-2xl mx-auto font-normal">
+      Explore every detail. Rotate, zoom, and customize your product in real time with high-precision physics-based materials.
+    </p>
+  </section>
+
+  <!-- ================= MAIN 3D SHOWCASE & INTERACTIVE STUDIO ================= -->
+  <section id="showcase" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 w-full">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- 3D Canvas Viewport (7 Cols on desktop) -->
+      <div class="lg:col-span-7 bg-white rounded-3xl border border-neutral-200 shadow-soft overflow-hidden relative flex flex-col h-[520px] sm:h-[620px]">
+        
+        <!-- Top Status Bar & Viewport Badges -->
+        <div class="absolute top-4 left-4 right-4 z-20 flex justify-between items-center pointer-events-none">
+          <div class="flex items-center gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-neutral-200/80 text-xs font-medium text-neutral-700 shadow-sm pointer-events-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="sparkles" aria-hidden="true" class="lucide lucide-sparkles w-3.5 h-3.5 text-amber-500"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg>
+            <span class="">Interactive 360° Studio</span>
+          </div>
+
+          <div class="flex items-center gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-neutral-200/80 text-xs font-mono text-neutral-600 shadow-sm pointer-events-auto">
+            <span id="fpsCounter" class="">20 FPS</span>
+            <span class="text-neutral-300">•</span>
+            <span id="renderEngineLabel" class="">WebGL / PBR</span>
+          </div>
+        </div>
+
+        <!-- 3D Canvas Container -->
+        <div id="canvasContainer" class="canvas-container w-full h-full relative cursor-grab active:cursor-grabbing bg-gradient-to-b from-neutral-50 via-white to-neutral-100 flex items-center justify-center">
+          
+          <!-- Loading Screen Overlay -->
+          <div id="loader" class="absolute inset-0 z-30 bg-white flex flex-col items-center justify-center transition-opacity duration-500 opacity-0" style="display: none;">
+            <div class="w-12 h-12 border-3 border-neutral-200 border-t-black rounded-full animate-spin mb-4"></div>
+            <p class="text-sm font-medium text-neutral-700">Loading 3D Experience...</p>
+            <p class="text-xs text-neutral-400 mt-1">Initializing PBR Shaders &amp; Geometry</p>
+          </div>
+
+          <!-- Real WebGL Canvas target -->
+          <canvas id="threeCanvas" class="w-full h-full block focus:outline-none" width="867" height="772" style="width: 694px; height: 618px;"></canvas>
+        </div>
+
+        <!-- Interactive Floating Camera Toolbar inside Canvas -->
+        <div class="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-white/90 backdrop-blur-md p-1.5 rounded-full border border-neutral-200 shadow-lg">
+          <button id="btnRotate360" title="Auto Rotate" class="p-2.5 rounded-full text-neutral-600 hover:text-black hover:bg-neutral-100 active:scale-90 transition-all flex items-center gap-1.5 text-xs font-medium">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="refresh-cw" aria-hidden="true" class="lucide lucide-refresh-cw w-4 h-4"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+            <span class="hidden sm:inline">Auto Orbit</span>
+          </button>
+          <div class="h-4 w-[1px] bg-neutral-200"></div>
+          <button id="btnZoomIn" title="Zoom In" class="p-2.5 rounded-full text-neutral-600 hover:text-black hover:bg-neutral-100 active:scale-90 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="zoom-in" aria-hidden="true" class="lucide lucide-zoom-in w-4 h-4"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="11" x2="11" y1="8" y2="14"></line><line x1="8" x2="14" y1="11" y2="11"></line></svg>
+          </button>
+          <button id="btnZoomOut" title="Zoom Out" class="p-2.5 rounded-full text-neutral-600 hover:text-black hover:bg-neutral-100 active:scale-90 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="zoom-out" aria-hidden="true" class="lucide lucide-zoom-out w-4 h-4"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="8" x2="14" y1="11" y2="11"></line></svg>
+          </button>
+          <div class="h-4 w-[1px] bg-neutral-200"></div>
+          <button id="btnResetCamera" title="Reset View" class="px-3.5 py-1.5 bg-neutral-900 hover:bg-black text-white rounded-full text-xs font-medium active:scale-95 transition-all flex items-center gap-1.5 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="rotate-ccw" aria-hidden="true" class="lucide lucide-rotate-ccw w-3.5 h-3.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            <span class="">Reset View</span>
+          </button>
+        </div>
+
+        <!-- Help overlay on drag hint -->
+        <div class="absolute bottom-5 right-5 hidden sm:flex items-center gap-1.5 text-[11px] text-neutral-400 bg-white/80 backdrop-blur-sm px-2.5 py-1 rounded-md border border-neutral-200/60 pointer-events-none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="mouse-pointer" aria-hidden="true" class="lucide lucide-mouse-pointer w-3 h-3"><path d="M12.586 12.586 19 19"></path><path d="M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z"></path></svg>
+          <span class="">Click &amp; Drag to rotate • Scroll to zoom</span>
+        </div>
+      </div>
+
+      <!-- Product Configuration & Information Panel (5 Cols on desktop) -->
+      <div class="lg:col-span-5 flex flex-col space-y-6">
+        
+        <!-- Main Product Card -->
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200 shadow-soft">
+          
+          <div class="flex items-center justify-between">
+            <span class="text-xs uppercase font-bold tracking-widest text-neutral-400">Flagship Acoustic Device</span>
+            <div class="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full text-xs font-semibold">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              In Stock &amp; Ready
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-baseline justify-between">
+            <h2 class="text-3xl font-extrabold text-neutral-950 tracking-tight">Proto X1 Pro</h2>
+            <div class="text-2xl font-bold text-neutral-900">$1,299</div>
+          </div>
+
+          <p class="mt-3 text-neutral-600 text-sm leading-relaxed">
+            A precision-engineered studio headset forged from aerospace-grade aluminum and acoustically isolated titanium chambers for pristine soundstage fidelity.
+          </p>
+
+          <!-- Color Customizer Matrix -->
+          <div class="mt-8 pt-6 border-t border-neutral-100">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">Finish &amp; Colorway</span>
+              <span id="currentColorName" class="text-xs font-bold text-neutral-900 bg-neutral-100 px-2.5 py-0.5 rounded-full">Obsidian Black</span>
+            </div>
+
+            <!-- Color Palette Radio Selectors -->
+            <div class="flex items-center gap-3.5" id="colorPickerContainer" role="radiogroup" aria-label="Product color choices">
+              <!-- Obsidian Black -->
+              <button data-color="#18181b" data-name="Obsidian Black" data-metalness="0.85" data-roughness="0.25" class="color-btn relative w-9 h-9 rounded-full bg-zinc-900 ring-2 ring-black ring-offset-2 transition-all duration-200 active:scale-95 focus:outline-none" aria-label="Obsidian Black finish" aria-checked="true">
+              </button>
+
+              <!-- Space Silver -->
+              <button data-color="#e2e8f0" data-name="Space Silver" data-metalness="0.95" data-roughness="0.2" class="color-btn relative w-9 h-9 rounded-full bg-slate-200 ring-1 ring-neutral-300 ring-offset-2 transition-all duration-200 active:scale-95 hover:scale-105 focus:outline-none" aria-label="Space Silver finish" aria-checked="false">
+              </button>
+
+              <!-- Ceramic White -->
+              <button data-color="#ffffff" data-name="Ceramic White" data-metalness="0.3" data-roughness="0.15" class="color-btn relative w-9 h-9 rounded-full bg-white ring-1 ring-neutral-300 ring-offset-2 transition-all duration-200 active:scale-95 hover:scale-105 focus:outline-none" aria-label="Ceramic White finish" aria-checked="false">
+              </button>
+
+              <!-- Deep Cobalt Blue -->
+              <button data-color="#1e3a8a" data-name="Deep Cobalt Blue" data-metalness="0.8" data-roughness="0.3" class="color-btn relative w-9 h-9 rounded-full bg-blue-900 ring-1 ring-neutral-300 ring-offset-2 transition-all duration-200 active:scale-95 hover:scale-105 focus:outline-none" aria-label="Deep Cobalt Blue finish" aria-checked="false">
+              </button>
+
+              <!-- Crimson Red -->
+              <button data-color="#991b1b" data-name="Crimson Anodized Red" data-metalness="0.85" data-roughness="0.25" class="color-btn relative w-9 h-9 rounded-full bg-red-800 ring-1 ring-neutral-300 ring-offset-2 transition-all duration-200 active:scale-95 hover:scale-105 focus:outline-none" aria-label="Crimson Anodized Red finish" aria-checked="false">
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Specs List -->
+          <div class="mt-8 pt-6 border-t border-neutral-100 grid grid-cols-2 gap-4">
+            <div class="bg-neutral-50 p-3.5 rounded-2xl border border-neutral-100">
+              <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wider block">Chassis Architecture</span>
+              <span class="text-sm font-semibold text-neutral-800 mt-0.5 block">CNC 6000 Aluminum</span>
+            </div>
+            <div class="bg-neutral-50 p-3.5 rounded-2xl border border-neutral-100">
+              <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wider block">Acoustic Weight</span>
+              <span class="text-sm font-semibold text-neutral-800 mt-0.5 block">285g Featherweight</span>
+            </div>
+            <div class="bg-neutral-50 p-3.5 rounded-2xl border border-neutral-100">
+              <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wider block">Transducer Driver</span>
+              <span class="text-sm font-semibold text-neutral-800 mt-0.5 block">50mm Beryllium Dome</span>
+            </div>
+            <div class="bg-neutral-50 p-3.5 rounded-2xl border border-neutral-100">
+              <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wider block">Continuous Playback</span>
+              <span class="text-sm font-semibold text-neutral-800 mt-0.5 block">60h Ultra Battery</span>
+            </div>
+          </div>
+
+          <!-- Purchase / Configure CTA -->
+          <div class="mt-8 flex flex-col sm:flex-row gap-3">
+            <button class="flex-1 py-3.5 px-6 bg-black hover:bg-neutral-800 text-white rounded-2xl font-semibold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="shopping-bag" aria-hidden="true" class="lucide lucide-shopping-bag w-4 h-4"><path d="M16 10a4 4 0 0 1-8 0"></path><path d="M3.103 6.034h17.794"></path><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"></path></svg>
+              <span class="">Order Proto X1</span>
+            </button>
+            <button id="presetDetailBtn" class="py-3.5 px-5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-2xl font-medium text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="eye" aria-hidden="true" class="lucide lucide-eye w-4 h-4"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              <span class="">Focus Ear Cup</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Interactive Lighting Mode Switcher Card -->
+        <div class="bg-white rounded-3xl p-5 border border-neutral-200 shadow-soft flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="sun" aria-hidden="true" class="lucide lucide-sun w-5 h-5"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-neutral-900">Studio Lighting Environment</div>
+              <div class="text-[11px] text-neutral-500">HDR Key light with ground shadow</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-xl text-xs font-medium">
+            <button id="lightStudioBtn" class="px-3 py-1 rounded-lg bg-white shadow-xs font-semibold text-neutral-900 transition-all">Studio</button>
+            <button id="lightCyberBtn" class="px-3 py-1 rounded-lg text-neutral-600 hover:text-black transition-all">Cyber</button>
+            <button id="lightWarmBtn" class="px-3 py-1 rounded-lg text-neutral-600 hover:text-black transition-all">Warm</button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FEATURES SECTION ================= -->
+  <section id="features" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <span class="text-xs font-bold uppercase tracking-widest text-neutral-400">Core Capabilities</span>
+      <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-neutral-950 tracking-tight">Built for Next-Generation Visualization</h2>
+      <p class="mt-4 text-neutral-500 text-base leading-relaxed">
+        Engineered with Three.js and custom physically based rendering pipelines to bring industrial design to the web without compromise.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      
+      <!-- Feature Card 1 -->
+      <div class="bg-white p-7 rounded-3xl border border-neutral-200 shadow-soft hover:shadow-float transition-all duration-300 group">
+        <div class="w-12 h-12 rounded-2xl bg-neutral-100 text-black flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="rotate-3d" aria-hidden="true" class="lucide lucide-rotate-3d w-6 h-6"><path d="m15.194 13.707 3.814 1.86-1.86 3.814"></path><path d="M16.47214 7.52786 A 5 10 0 1 0 13 21.79796"></path><path d="M21.79796 11 A 10 5 0 1 0 19 15.57071"></path></svg>
+        </div>
+        <h3 class="text-lg font-bold text-neutral-900 mb-2">Interactive 360° Orbit</h3>
+        <p class="text-sm text-neutral-500 leading-relaxed">
+          Inspect every curve and chamfer seamlessly with inertia damping, constrained elevation limits, and smooth pan capabilities.
+        </p>
+      </div>
+
+      <!-- Feature Card 2 -->
+      <div class="bg-white p-7 rounded-3xl border border-neutral-200 shadow-soft hover:shadow-float transition-all duration-300 group">
+        <div class="w-12 h-12 rounded-2xl bg-neutral-100 text-black flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="sun-medium" aria-hidden="true" class="lucide lucide-sun-medium w-6 h-6"><circle cx="12" cy="12" r="4"></circle><path d="M12 3v1"></path><path d="M12 20v1"></path><path d="M3 12h1"></path><path d="M20 12h1"></path><path d="m18.364 5.636-.707.707"></path><path d="m6.343 17.657-.707.707"></path><path d="m5.636 5.636.707.707"></path><path d="m17.657 17.657.707.707"></path></svg>
+        </div>
+        <h3 class="text-lg font-bold text-neutral-900 mb-2">PBR &amp; Soft Shadows</h3>
+        <p class="text-sm text-neutral-500 leading-relaxed">
+          Physically based roughness, specular sheen, and soft contact-hardening ground shadows mimic tangible physical prototypes.
+        </p>
+      </div>
+
+      <!-- Feature Card 3 -->
+      <div class="bg-white p-7 rounded-3xl border border-neutral-200 shadow-soft hover:shadow-float transition-all duration-300 group">
+        <div class="w-12 h-12 rounded-2xl bg-neutral-100 text-black flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="palette" aria-hidden="true" class="lucide lucide-palette w-6 h-6"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"></path><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>
+        </div>
+        <h3 class="text-lg font-bold text-neutral-900 mb-2">Live Material Swap</h3>
+        <p class="text-sm text-neutral-500 leading-relaxed">
+          Dynamic material shader mutation instantly updates metalness, base coat, and micro-reflections without geometry reload.
+        </p>
+      </div>
+
+      <!-- Feature Card 4 -->
+      <div class="bg-white p-7 rounded-3xl border border-neutral-200 shadow-soft hover:shadow-float transition-all duration-300 group">
+        <div class="w-12 h-12 rounded-2xl bg-neutral-100 text-black flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="smartphone" aria-hidden="true" class="lucide lucide-smartphone w-6 h-6"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect><path d="M12 18h.01"></path></svg>
+        </div>
+        <h3 class="text-lg font-bold text-neutral-900 mb-2">Cross-Platform Touch</h3>
+        <p class="text-sm text-neutral-500 leading-relaxed">
+          Responsive two-finger pinch-to-zoom, single-finger rotate, and optimized draw-calls deliver a reliable 60 FPS on any display.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= TECHNOLOGY STACK SECTION ================= -->
+  <section id="technology" class="bg-neutral-900 text-white py-20"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <!-- Header Section with Engineering Badges and Blueprint Accents -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 relative">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-800/80 border border-neutral-700/80 text-xs font-mono font-medium text-emerald-400 mb-4 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+        SYSTEM BLUEPRINT &amp; ARCHITECTURE SPECIFICATION
+      </div>
+      <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+        Engineered with <span class="bg-gradient-to-r from-white via-neutral-200 to-neutral-500 bg-clip-text text-transparent">Modern Web Standards</span>
+      </h2>
+    </div>
+    <div class="mt-6 md:mt-0 max-w-md">
+      <p class="text-neutral-400 text-sm leading-relaxed">
+        A reactive WebGL engine built upon React Three Fiber semantics, typed state trees, and hardware-accelerated shaders delivering lossless 60 FPS fidelity across mobile and desktop runtimes.
+      </p>
+      <div class="flex items-center gap-4 mt-3 text-xs font-mono text-neutral-400">
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>TypeScript 5.4</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>Three.js r128</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Zero Hydration Lag</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 Enhanced Architecture Cards with Micro-Badges and Performance Metrics -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+    
+    <!-- 01 React + TS -->
+    <div class="group relative bg-neutral-950/80 border border-neutral-800 hover:border-neutral-700 p-6 rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">01 / RUNTIME</span>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-400 border border-blue-800/50">0ms Hydration</span>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="layers" class="w-5 h-5 text-blue-400"></i>
+          <h3 class="text-base font-bold text-white">React + TypeScript</h3>
+        </div>
+        <p class="text-xs text-neutral-400 leading-relaxed mb-4">
+          Strict typed state dispatching and clean component hierarchy with reactive prop pipelines.
+        </p>
+      </div>
+      <div class="pt-4 border-t border-neutral-800/80 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+        <span class="">Component Tree</span>
+        <span class="text-emerald-400 font-semibold">Strict Memoized</span>
+      </div>
+    </div>
+
+    <!-- 02 Three.js + R3F -->
+    <div class="group relative bg-neutral-950/80 border border-neutral-800 hover:border-neutral-700 p-6 rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">02 / GRAPHICS</span>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-900/50 text-emerald-400 border border-emerald-800/50">60 FPS Locked</span>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="box" class="w-5 h-5 text-emerald-400"></i>
+          <h3 class="text-base font-bold text-white">Three.js + R3F</h3>
+        </div>
+        <p class="text-xs text-neutral-400 leading-relaxed mb-4">
+          Scene graph orchestration, directional shadow bias, and dynamic PBR material mutation.
+        </p>
+      </div>
+      <div class="pt-4 border-t border-neutral-800/80 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+        <span class="">Color Tone Map</span>
+        <span class="text-emerald-400 font-semibold">ACES Filmic</span>
+      </div>
+    </div>
+
+    <!-- 03 Drei OrbitControls -->
+    <div class="group relative bg-neutral-950/80 border border-neutral-800 hover:border-neutral-700 p-6 rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">03 / INTERACTION</span>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-900/50 text-purple-400 border border-purple-800/50">0.05 Inertia</span>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="compass" class="w-5 h-5 text-purple-400"></i>
+          <h3 class="text-base font-bold text-white">Drei OrbitControls</h3>
+        </div>
+        <p class="text-xs text-neutral-400 leading-relaxed mb-4">
+          Damped spherical transforms, polar angle clamping, and elastic dual-finger touch zooming.
+        </p>
+      </div>
+      <div class="pt-4 border-t border-neutral-800/80 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+        <span class="">Elevation Limit</span>
+        <span class="text-purple-400 font-semibold">Ground Clamped</span>
+      </div>
+    </div>
+
+    <!-- 04 Tailwind CSS -->
+    <div class="group relative bg-neutral-950/80 border border-neutral-800 hover:border-neutral-700 p-6 rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">04 / PRESENTATION</span>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-900/50 text-amber-300 border border-amber-800/50">Zero Runtime</span>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="sparkles" class="w-5 h-5 text-amber-300"></i>
+          <h3 class="text-base font-bold text-white">Tailwind Design Tokens</h3>
+        </div>
+        <p class="text-xs text-neutral-400 leading-relaxed mb-4">
+          Sub-pixel whitespace rhythm, glassmorphism overlays, and native responsive display breakpoints.
+        </p>
+      </div>
+      <div class="pt-4 border-t border-neutral-800/80 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+        <span class="">CSS Overhead</span>
+        <span class="text-amber-300 font-semibold">&lt; 14KB Pure CSS</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Premium macOS Style Terminal Code Inspector -->
+  <div class="mt-12 bg-neutral-950 rounded-3xl border border-neutral-800 overflow-hidden shadow-2xl">
+    
+    <!-- macOS Window Chrome & File Tabs -->
+    <div class="bg-neutral-900/90 border-b border-neutral-800 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-6">
+        <!-- Traffic Light Buttons -->
+        <div class="flex items-center space-x-2">
+          <span class="w-3 h-3 rounded-full bg-red-800 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+        </div>
+        
+        <!-- Interactive Tab Selectors -->
+        <div class="flex items-center space-x-1 font-mono text-xs overflow-x-auto">
+          <button id="tabProductModel" onclick="switchArchitectureTab('model')" class="px-3.5 py-1.5 rounded-lg bg-neutral-800 text-white font-medium flex items-center gap-2 border border-neutral-700/80 transition-all">
+            <i data-lucide="file-code" class="w-3.5 h-3.5 text-blue-400"></i>
+            <span class="">ProductModel.tsx</span>
+          </button>
+          <button id="tabLighting" onclick="switchArchitectureTab('lighting')" class="px-3.5 py-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 flex items-center gap-2 transition-all">
+            <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span class="">SceneLighting.tsx</span>
+          </button>
+          <button id="tabControls" onclick="switchArchitectureTab('controls')" class="px-3.5 py-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 flex items-center gap-2 transition-all">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span class="">useProductControls.ts</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Meta Stats & Copy Action -->
+      <div class="flex items-center space-x-3 text-xs font-mono">
+        <div class="hidden sm:flex items-center gap-2 text-neutral-400 bg-neutral-950 px-2.5 py-1 rounded-md border border-neutral-800">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <span class="">12.4 KB Gzipped</span>
+        </div>
+        <button id="btnCopyCode" onclick="copyArchitectureCode()" class="flex items-center gap-1.5 px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-md border border-neutral-700 transition-all text-xs font-medium">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span id="copyCodeText" class="">Copy Snippet</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Code Snippet Area with Line Numbers & High-Fidelity Highlighting -->
+    <div class="p-4 sm:p-6 overflow-x-auto font-mono text-xs leading-relaxed text-neutral-300 bg-neutral-950">
+      <div id="codeSnippetContent" class="flex gap-4">
+        <!-- Line Numbers Column -->
+        <div class="select-none text-neutral-600 text-right space-y-1">
+          <div class="">01</div><div class="">02</div><div class="">03</div><div class="">04</div><div class="">05</div><div class="">06</div><div class="">07</div><div class="">08</div><div class="">09</div><div class="">10</div><div class="">11</div><div class="">12</div><div class="">13</div><div class="">14</div><div class="">15</div><div class="">16</div><div class="">17</div><div class="">18</div><div class="">19</div><div class="">20</div>
+        </div>
+        <!-- Code Body Column -->
+        <pre class="flex-1"><code><span class="text-purple-400">import</span> React, { useRef, useEffect } <span class="text-purple-400">from</span> <span class="text-emerald-300">'react'</span>;
+<span class="text-purple-400">import</span> { useGLTF } <span class="text-purple-400">from</span> <span class="text-emerald-300">'@react-three/drei'</span>;
+<span class="text-purple-400">import</span> * <span class="text-purple-400">as</span> THREE <span class="text-purple-400">from</span> <span class="text-emerald-300">'three'</span>;
+
+<span class="text-neutral-500">// Drop-in production GLTF/GLB loader with automatic PBR traversal</span>
+<span class="text-purple-400">export function</span> <span class="text-blue-400">ProductModel</span>({ color, finish }: { color: <span class="text-amber-300">string</span>; finish: { metalness: <span class="text-amber-300">number</span>; roughness: <span class="text-amber-300">number</span> } }) {
+  <span class="text-purple-400">const</span> { scene } = <span class="text-blue-400">useGLTF</span>(<span class="text-emerald-300">'/models/proto-x1.glb'</span>, <span class="text-amber-300">true</span>, <span class="text-amber-300">true</span>, (loader) =&gt; {
+    loader.manager.onError = () =&gt; console.warn(<span class="text-emerald-300">'GLTF fallback to procedural geometry'</span>);
+  });
+
+  <span class="text-blue-400">useEffect</span>(() =&gt; {
+    scene?.<span class="text-blue-400">traverse</span>((child: any) =&gt; {
+      <span class="text-purple-400">if</span> (child.isMesh &amp;&amp; child.material) {
+        child.material.color.<span class="text-blue-400">set</span>(color);
+        child.material.metalness = finish.metalness;
+        child.material.roughness = finish.roughness;
+        child.castShadow = <span class="text-amber-300">true</span>;
+        child.receiveShadow = <span class="text-amber-300">true</span>;
+      }
+    });
+  }, [color, finish, scene]);
+
+  <span class="text-purple-400">return</span> &lt;<span class="text-blue-400">primitive</span> <span class="text-yellow-300">object</span>={scene} <span class="text-purple-400">dispose</span>={<span class="text-amber-300">null</span>} /&gt;;
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Architectural Telemetry Bar -->
+    <div class="border-t border-neutral-800 bg-neutral-900/60 px-6 py-3.5 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono text-neutral-400">
+      <div class="flex items-center gap-2">
+        <span class="text-neutral-500">DRAW CALLS:</span>
+        <span class="text-emerald-400 font-bold">&lt; 28 calls</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-neutral-500">VRAM ALLOC:</span>
+        <span class="text-white font-bold">24.8 MB</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-neutral-500">FRAME LATENCY:</span>
+        <span class="text-emerald-400 font-bold">~1.18 ms</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-neutral-500">PIPELINE:</span>
+        <span class="text-blue-400 font-bold">Deferred PBR 2.0</span>
+      </div>
+    </div>
+
+  </div>
+</div></section>
+
+  <!-- ================= DETAILED SPECIFICATIONS SECTION ================= -->
+  <section id="specs" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="bg-white rounded-3xl p-8 sm:p-12 border border-neutral-200 shadow-soft">
+      <div class="max-w-2xl mb-10">
+        <span class="text-xs font-bold uppercase tracking-widest text-neutral-400">Detailed Datasheet</span>
+        <h2 class="text-3xl font-bold text-neutral-900 mt-2">Proto X1 Architectural Highlights</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-neutral-100 pt-8">
+        <div>
+          <h4 class="text-sm font-bold text-neutral-950 uppercase tracking-wider mb-3">Acoustic Engineering</h4>
+          <ul class="space-y-2.5 text-sm text-neutral-600">
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> Active Resonance Compensation</li>
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> Hybrid Dual-Cavity Isolation</li>
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> THD &lt; 0.05% @ 1kHz</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-sm font-bold text-neutral-950 uppercase tracking-wider mb-3">Connectivity &amp; Power</h4>
+          <ul class="space-y-2.5 text-sm text-neutral-600">
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> Bluetooth 5.4 LE Audio Ready</li>
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> USB-C Lossless 32-bit/384kHz DAC</li>
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> 15-min Quick Charge for 10 Hours</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-sm font-bold text-neutral-950 uppercase tracking-wider mb-3">In The Box</h4>
+          <ul class="space-y-2.5 text-sm text-neutral-600">
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> Proto X1 Precision Headset</li>
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> Hard-Shell Magnetic Travel Case</li>
+            <li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check" aria-hidden="true" class="lucide lucide-check w-4 h-4 text-emerald-500"><path d="M20 6 9 17l-5-5"></path></svg> Braided Oxygen-Free Audio Cable</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="mt-auto border-t border-neutral-200 bg-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white font-bold text-sm">
+          P3
+        </div>
+        <span class="text-sm font-bold tracking-tight text-neutral-900">Proto3D Studio</span>
+        <span class="text-xs text-neutral-400">• Built with WebGL, Three.js &amp; Tailwind</span>
+      </div>
+
+      <div class="flex items-center space-x-6 text-sm text-neutral-500">
+        <a href="#" class="hover:text-black transition-colors">Privacy</a>
+        <a href="#" class="hover:text-black transition-colors">Terms</a>
+        <a href="#" class="hover:text-black transition-colors">Documentation</a>
+        <a href="https://github.com" target="_blank" class="hover:text-black transition-colors flex items-center gap-1">
+          <i data-lucide="github" class="w-4 h-4"></i>
+          <span class="">GitHub</span>
+        </a>
+      </div>
+
+      <p class="text-xs text-neutral-400">
+        © 2025 Proto3D. All rights reserved.
+      </p>
+
+    </div>
+  </footer>
+
+  <!-- ================= THREE.JS REAL 3D ENGINE SCRIPT ================= -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Mobile navigation toggle
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    mobileBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+
+    // -------------------------------------------------------------
+    // THREE.JS PRODUCTION 3D SCENE SETUP
+    // -------------------------------------------------------------
+    const container = document.getElementById('canvasContainer');
+    const canvas = document.getElementById('threeCanvas');
+    const loader = document.getElementById('loader');
+
+    // 1. Scene & Background
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xF8F9FA);
+
+    // 2. Camera Setup
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      100
+    );
+    const INITIAL_CAMERA_POS = { x: 3.5, y: 1.8, z: 4.2 };
+    camera.position.set(INITIAL_CAMERA_POS.x, INITIAL_CAMERA_POS.y, INITIAL_CAMERA_POS.z);
+
+    // 3. WebGL Renderer with High-Precision Shadows & Antialiasing
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+
+    // 4. OrbitControls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = false;
+    controls.minDistance = 2.2;
+    controls.maxDistance = 7.5;
+    controls.maxPolarAngle = Math.PI / 2 + 0.05; // Don't flip under the floor
+    controls.minPolarAngle = 0.2;
+    controls.target.set(0, 0.4, 0);
+
+    // 5. Realistic Studio Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    // Key directional light with soft shadow map
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    keyLight.position.set(5, 7, 5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 25;
+    keyLight.shadow.camera.left = -4;
+    keyLight.shadow.camera.right = 4;
+    keyLight.shadow.camera.top = 4;
+    keyLight.shadow.camera.bottom = -4;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    // Fill Light for rim contrast
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.6);
+    fillLight.position.set(-5, 3, -3);
+    scene.add(fillLight);
+
+    // Soft Rim Light from underneath/back
+    const rimLight = new THREE.PointLight(0xffffff, 0.5, 10);
+    rimLight.position.set(0, 3, -4);
+    scene.add(rimLight);
+
+    // 6. Ground Plane with Soft Shadow Reception
+    const groundGeo = new THREE.PlaneGeometry(30, 30);
+    const groundMat = new THREE.ShadowMaterial({
+      opacity: 0.15
+    });
+    const groundPlane = new THREE.Mesh(groundGeo, groundMat);
+    groundPlane.rotation.x = -Math.PI / 2;
+    groundPlane.position.y = -0.85;
+    groundPlane.receiveShadow = true;
+    scene.add(groundPlane);
+
+    // Subtle Circular Pedestal
+    const pedestalGeo = new THREE.CylinderGeometry(2.4, 2.6, 0.05, 64);
+    const pedestalMat = new THREE.MeshStandardMaterial({
+      color: 0xeeeeee,
+      roughness: 0.8,
+      metalness: 0.1
+    });
+    const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
+    pedestal.position.y = -0.875;
+    pedestal.receiveShadow = true;
+    scene.add(pedestal);
+
+    // 7. HIGH-FIDELITY PRODUCT GEOMETRY (Proto X1 Studio Headphones)
+    // Dynamic materials for instant color/finish mutation
+    const productRoot = new THREE.Group();
+    scene.add(productRoot);
+
+    // Material definitions
+    const configurableMaterial = new THREE.MeshStandardMaterial({
+      color: 0x18181b,
+      metalness: 0.85,
+      roughness: 0.25,
+    });
+
+    const accentChromeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xcccccc,
+      metalness: 0.95,
+      roughness: 0.1,
+    });
+
+    const softCushionMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1c1917,
+      roughness: 0.9,
+      metalness: 0.05,
+    });
+
+    // Ear Cup Assembly Function (Left & Right)
+    function createEarCup(isRight = false) {
+      const cupGroup = new THREE.Group();
+      const sideMult = isRight ? 1 : -1;
+
+      // Outer Shell
+      const outerCupGeo = new THREE.CylinderGeometry(0.7, 0.78, 0.45, 64);
+      const outerCup = new THREE.Mesh(outerCupGeo, configurableMaterial);
+      outerCup.rotation.z = Math.PI / 2;
+      outerCup.castShadow = true;
+      outerCup.receiveShadow = true;
+      cupGroup.add(outerCup);
+
+      // Aluminum Bevel Ring
+      const ringGeo = new THREE.TorusGeometry(0.74, 0.04, 32, 64);
+      const ring = new THREE.Mesh(ringGeo, accentChromeMaterial);
+      ring.rotation.y = Math.PI / 2;
+      ring.position.x = sideMult * 0.18;
+      ring.castShadow = true;
+      cupGroup.add(ring);
+
+      // Ear Cushion (Memory Foam ring)
+      const cushionGeo = new THREE.TorusGeometry(0.62, 0.2, 32, 64);
+      const cushion = new THREE.Mesh(cushionGeo, softCushionMaterial);
+      cushion.rotation.y = Math.PI / 2;
+      cushion.position.x = sideMult * -0.22;
+      cushion.castShadow = true;
+      cupGroup.add(cushion);
+
+      // Inner Speaker Grille Cloth
+      const grilleGeo = new THREE.CircleGeometry(0.55, 32);
+      const grilleMat = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        roughness: 0.95
+      });
+      const grille = new THREE.Mesh(grilleGeo, grilleMat);
+      grille.rotation.y = isRight ? -Math.PI / 2 : Math.PI / 2;
+      grille.position.x = sideMult * -0.25;
+      cupGroup.add(grille);
+
+      // Gimbal Swivel Hinge
+      const hingeGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.35, 32);
+      const hinge = new THREE.Mesh(hingeGeo, accentChromeMaterial);
+      hinge.position.set(0, 0.82, 0);
+      hinge.castShadow = true;
+      cupGroup.add(hinge);
+
+      // Y-Fork Arm
+      const forkCurve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(0, 0.82, 0),
+        new THREE.Vector3(0, 0.4, 0),
+        new THREE.Vector3(0, 0, sideMult * 0.05)
+      );
+      const forkGeo = new THREE.TubeGeometry(forkCurve, 32, 0.06, 16, false);
+      const forkMesh = new THREE.Mesh(forkGeo, configurableMaterial);
+      forkMesh.castShadow = true;
+      cupGroup.add(forkMesh);
+
+      return cupGroup;
+    }
+
+    // Add Left & Right Ear Cups
+    const leftCup = createEarCup(false);
+    leftCup.position.set(-1.25, 0.3, 0);
+    productRoot.add(leftCup);
+
+    const rightCup = createEarCup(true);
+    rightCup.position.set(1.25, 0.3, 0);
+    productRoot.add(rightCup);
+
+    // Ergonomic Headband Arch
+    const headbandCurve = new THREE.CubicBezierCurve3(
+      new THREE.Vector3(-1.25, 1.1, 0),
+      new THREE.Vector3(-1.0, 2.35, 0),
+      new THREE.Vector3(1.0, 2.35, 0),
+      new THREE.Vector3(1.25, 1.1, 0)
+    );
+    const headbandGeo = new THREE.TubeGeometry(headbandCurve, 64, 0.12, 24, false);
+    const headbandMesh = new THREE.Mesh(headbandGeo, configurableMaterial);
+    headbandMesh.castShadow = true;
+    headbandMesh.receiveShadow = true;
+    productRoot.add(headbandMesh);
+
+    // Padded Headband Cushion (Inner arch)
+    const cushionCurve = new THREE.CubicBezierCurve3(
+      new THREE.Vector3(-0.95, 1.35, 0),
+      new THREE.Vector3(-0.8, 2.2, 0),
+      new THREE.Vector3(0.8, 2.2, 0),
+      new THREE.Vector3(0.95, 1.35, 0)
+    );
+    const innerCushionGeo = new THREE.TubeGeometry(cushionCurve, 48, 0.16, 24, false);
+    const innerCushion = new THREE.Mesh(innerCushionGeo, softCushionMaterial);
+    innerCushion.castShadow = true;
+    productRoot.add(innerCushion);
+
+    // Precision Extension Sliders (Left and Right)
+    const sliderGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.45, 32);
+    const leftSlider = new THREE.Mesh(sliderGeo, accentChromeMaterial);
+    leftSlider.position.set(-1.24, 1.05, 0);
+    productRoot.add(leftSlider);
+
+    const rightSlider = new THREE.Mesh(sliderGeo, accentChromeMaterial);
+    rightSlider.position.set(1.24, 1.05, 0);
+    productRoot.add(rightSlider);
+
+    // Initial slight angle for elegant product stance
+    productRoot.position.y = 0.2;
+    productRoot.rotation.y = 0.45;
+
+    // Simulate model load completion
+    setTimeout(() => {
+      loader.classList.add('opacity-0');
+      setTimeout(() => loader.style.display = 'none', 500);
+    }, 350);
+
+    // -------------------------------------------------------------
+    // INTERACTION & CONTROL LOGIC
+    // -------------------------------------------------------------
+    let isAutoRotating = false;
+
+    // 1. Color Customizer Dispatcher
+    const colorButtons = document.querySelectorAll('.color-btn');
+    const currentColorName = document.getElementById('currentColorName');
+
+    colorButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const hex = btn.getAttribute('data-color');
+        const name = btn.getAttribute('data-name');
+        const metal = parseFloat(btn.getAttribute('data-metalness'));
+        const rough = parseFloat(btn.getAttribute('data-roughness'));
+
+        // Update Three.js Material
+        configurableMaterial.color.set(hex);
+        configurableMaterial.metalness = metal;
+        configurableMaterial.roughness = rough;
+
+        // Update UI Badges & Ring states
+        colorButtons.forEach(b => {
+          b.classList.remove('ring-black', 'ring-2', 'scale-115');
+          b.setAttribute('aria-checked', 'false');
+        });
+        btn.classList.add('ring-black', 'ring-2');
+        btn.setAttribute('aria-checked', 'true');
+        currentColorName.textContent = name;
+      });
+    });
+
+    // 2. Camera View Buttons
+    document.getElementById('btnResetCamera').addEventListener('click', () => {
+      // Smooth reset
+      smoothMoveCamera(INITIAL_CAMERA_POS.x, INITIAL_CAMERA_POS.y, INITIAL_CAMERA_POS.z, 0, 0.4, 0);
+    });
+
+    document.getElementById('btnZoomIn').addEventListener('click', () => {
+      const dir = camera.position.clone().sub(controls.target).normalize();
+      const newPos = camera.position.clone().sub(dir.multiplyScalar(0.65));
+      if (newPos.distanceTo(controls.target) >= controls.minDistance) {
+        smoothMoveCamera(newPos.x, newPos.y, newPos.z);
+      }
+    });
+
+    document.getElementById('btnZoomOut').addEventListener('click', () => {
+      const dir = camera.position.clone().sub(controls.target).normalize();
+      const newPos = camera.position.clone().add(dir.multiplyScalar(0.65));
+      if (newPos.distanceTo(controls.target) <= controls.maxDistance) {
+        smoothMoveCamera(newPos.x, newPos.y, newPos.z);
+      }
+    });
+
+    const rotateBtn = document.getElementById('btnRotate360');
+    rotateBtn.addEventListener('click', () => {
+      isAutoRotating = !isAutoRotating;
+      controls.autoRotate = isAutoRotating;
+      controls.autoRotateSpeed = 2.0;
+      rotateBtn.classList.toggle('bg-black', isAutoRotating);
+      rotateBtn.classList.toggle('text-white', isAutoRotating);
+    });
+
+    // Focus Ear Cup Macro
+    document.getElementById('presetDetailBtn').addEventListener('click', () => {
+      smoothMoveCamera(1.9, 0.5, 1.4, 1.25, 0.3, 0);
+    });
+
+    // Smooth Camera Transition Helper
+    function smoothMoveCamera(tx, ty, tz, targetX = 0, targetY = 0.4, targetZ = 0) {
+      let t = 0;
+      const startCam = camera.position.clone();
+      const startTarget = controls.target.clone();
+      const endCam = new THREE.Vector3(tx, ty, tz);
+      const endTarget = new THREE.Vector3(targetX, targetY, targetZ);
+
+      function step() {
+        t += 0.04;
+        if (t <= 1) {
+          camera.position.lerpVectors(startCam, endCam, t);
+          controls.target.lerpVectors(startTarget, endTarget, t);
+          controls.update();
+          requestAnimationFrame(step);
+        } else {
+          camera.position.copy(endCam);
+          controls.target.copy(endTarget);
+          controls.update();
+        }
+      }
+      step();
+    }
+
+    // 3. Lighting Environment Switcher
+    const lightStudioBtn = document.getElementById('lightStudioBtn');
+    const lightCyberBtn = document.getElementById('lightCyberBtn');
+    const lightWarmBtn = document.getElementById('lightWarmBtn');
+
+    function resetLightTabs() {
+      [lightStudioBtn, lightCyberBtn, lightWarmBtn].forEach(b => {
+        b.className = 'px-3 py-1 rounded-lg text-neutral-600 hover:text-black transition-all';
+      });
+    }
+
+    lightStudioBtn.addEventListener('click', () => {
+      resetLightTabs();
+      lightStudioBtn.className = 'px-3 py-1 rounded-lg bg-white shadow-xs font-semibold text-neutral-900 transition-all';
+      keyLight.color.set(0xffffff);
+      fillLight.color.set(0xe2e8f0);
+      scene.background.set(0xF8F9FA);
+    });
+
+    lightCyberBtn.addEventListener('click', () => {
+      resetLightTabs();
+      lightCyberBtn.className = 'px-3 py-1 rounded-lg bg-white shadow-xs font-semibold text-neutral-900 transition-all';
+      keyLight.color.set(0x38bdf8);
+      fillLight.color.set(0xa855f7);
+      scene.background.set(0x0f172a);
+    });
+
+    lightWarmBtn.addEventListener('click', () => {
+      resetLightTabs();
+      lightWarmBtn.className = 'px-3 py-1 rounded-lg bg-white shadow-xs font-semibold text-neutral-900 transition-all';
+      keyLight.color.set(0xfef08a);
+      fillLight.color.set(0xf97316);
+      scene.background.set(0xfffbeb);
+    });
+
+    // -------------------------------------------------------------
+    // RENDER LOOP & RESPONSIVE RESIZE
+    // -------------------------------------------------------------
+    let lastTime = performance.now();
+    let frameCount = 0;
+    const fpsCounter = document.getElementById('fpsCounter');
+
+    function animate(currentTime) {
+      requestAnimationFrame(animate);
+
+      // FPS Calculation
+      frameCount++;
+      if (currentTime - lastTime >= 1000) {
+        fpsCounter.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastTime = currentTime;
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+
+    // Window Resize Handling
+    window.addEventListener('resize', onWindowResize, false);
+    function onWindowResize() {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    // Touch event optimization for mobile
+    container.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+  </script>
+
+
+
+
+</body></html>
