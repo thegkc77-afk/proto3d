@@ -8,6 +8,21 @@ export function Hero() {
       {/* Background Ambient Lights */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-600/20 via-purple-600/20 to-pink-500/10 rounded-full blur-[140px] pointer-events-none -z-10" />
 
+      {/* Brand Emblem Logo Graphic */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="mb-6 relative"
+      >
+        <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 rounded-2xl blur-xl opacity-20 animate-pulse" />
+        <img
+          src={logoImg}
+          alt="Proto3D Official Emblem"
+          className="w-24 h-24 sm:w-28 sm:h-28 object-contain relative z-10 drop-shadow-[0_10px_25px_rgba(99,102,241,0.3)] hover:scale-105 transition-transform duration-300"
+        />
+      </motion.div>
+
 
       {/* Top Innovation Pill */}
       <motion.div
